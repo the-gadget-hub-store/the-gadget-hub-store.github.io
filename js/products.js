@@ -1,19 +1,10 @@
+
 /* ================================
    THE GADGET HUB STORE
    Products Module
+   AliExpress-Inspired Product Cards
+   Premium Skeleton Shimmer Edition
    ================================ */
-
-/**
- * Products Module
- *
- * Handles:
- * - Loading products from Firestore
- * - Rendering product cards
- * - Product filtering and sorting
- * - Currency conversion
- * - Favorites management
- * - Product details
- */
 
 import {
   isFirebaseInitialized,
@@ -47,47 +38,249 @@ import {
 } from './app.js';
 
 /* ================================
-   CURRENCY FORMATTING
+   CONSTANTS
    ================================ */
 
-function formatPrice(price, currency = 'USD') {
-  try {
-    const numericPrice = Number(price);
+const PLACEHOLDER_IMAGE =
+  'assets/images/placeholder.jpg';
 
-    if (!Number.isFinite(numericPrice)) {
-      return `${currency} 0.00`;
+const DEFAULT_PRODUCT_TITLE =
+  'Untitled Product';
+
+const DEFAULT_PRODUCT_CATEGORY =
+  'Gadgets';
+
+const SKELETON_CARD_COUNT = 8;
+
+/* ================================
+   SAFE VALUE HELPERS
+   ================================ */
+
+function toNumber(value, fallback = 0) {
+  const number = Number(value);
+
+  return Number.isFinite(number)
+    ? number
+    : fallback;
+}
+
+function clamp(value, minimum, maximum) {
+  return Math.min(
+    maximum,
+    Math.max(minimum, value)
+  );
+}
+
+function safeText(value, fallback = '') {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return fallback;
+  }
+
+  return String(value);
+}
+
+function getSafeExternalUrl(value) {
+  if (!value) {
+    return '';
+  }
+
+  try {
+    const url = new URL(
+      String(value),
+      window.location.href
+    );
+
+    if (
+      url.protocol !== 'https:' &&
+      url.protocol !== 'http:'
+    ) {
+      return '';
     }
 
-    const zeroDecimalCurrencies = ['JPY', 'KRW'];
-
-    const minimumFractionDigits =
-      zeroDecimalCurrencies.includes(currency) ? 0 : 2;
-
-    const maximumFractionDigits =
-      zeroDecimalCurrencies.includes(currency) ? 0 : 2;
-
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits,
-      maximumFractionDigits
-    }).format(numericPrice);
+    return escapeHtml(url.href);
   } catch (error) {
-    console.error('Error formatting price:', error);
-    return `${currency} ${Number(price || 0).toFixed(2)}`;
+    return '';
   }
 }
 
-export function getFormattedPrice(basePrice, targetCurrency = null) {
+function getProductImage(product) {
+  const image =
+    product.thumbnail ||
+    (
+      Array.isArray(product.images)
+        ? product.images.find(
+            (item) =>
+              typeof item === 'string' &&
+              item.trim()
+          )
+        : ''
+    ) ||
+    PLACEHOLDER_IMAGE;
+
+  return safeText(
+    image,
+    PLACEHOLDER_IMAGE
+  );
+}
+
+/* ================================
+   CURRENCY FORMATTING
+   ================================ */
+
+function formatPrice(
+  price,
+  currency = 'USD'
+) {
+  const numericPrice =
+    toNumber(price, 0);
+
+  try {
+    const zeroDecimalCurrencies = [
+      'JPY',
+      'KRW'
+    ];
+
+    const fractionDigits =
+      zeroDecimalCurrencies.includes(
+        currency
+      )
+        ? 0
+        : 2;
+
+    return new Intl.NumberFormat(
+      'en-US',
+      {
+        style: 'currency',
+        currency,
+        minimumFractionDigits:
+          fractionDigits,
+        maximumFractionDigits:
+          fractionDigits
+      }
+    ).format(numericPrice);
+  } catch (error) {
+    console.error(
+      'Error formatting price:',
+      error
+    );
+
+    return `${currency} ${numericPrice.toFixed(2)}`;
+  }
+}
+
+export function getFormattedPrice(
+  basePrice,
+  targetCurrency = null
+) {
   const currency =
-    targetCurrency || getCurrentCurrency();
+    targetCurrency ||
+    getCurrentCurrency();
 
   const convertedPrice =
-    convertCurrency(basePrice, currency);
+    convertCurrency(
+      toNumber(basePrice),
+      currency
+    );
 
   return formatPrice(
     convertedPrice,
     currency
+  );
+}
+
+/* ================================
+   SKELETON LOADING CARDS
+   ================================ */
+
+/**
+ * Build a temporary product-card skeleton.
+ *
+ * The CSS shimmer animation is provided by
+ * css/animations.css.
+ */
+function renderSkeletonCard(index) {
+  return `
+    <article
+      class="product-card skeleton-card"
+      aria-hidden="true"
+      data-skeleton-index="${index}"
+    >
+      <div
+        class="skeleton-image skeleton-shimmer"
+      ></div>
+
+      <div class="skeleton-card-content">
+
+        <div
+          class="skeleton skeleton-category"
+        ></div>
+
+        <div
+          class="skeleton skeleton-title"
+        ></div>
+
+        <div
+          class="skeleton skeleton-text"
+        ></div>
+
+        <div
+          class="skeleton skeleton-rating"
+        ></div>
+
+        <div
+          class="skeleton skeleton-price"
+        ></div>
+
+        <div
+          class="skeleton skeleton-button"
+        ></div>
+
+      </div>
+    </article>
+  `;
+}
+
+function renderSkeletonGrid(
+  container,
+  count = SKELETON_CARD_COUNT
+) {
+  if (!container) {
+    return;
+  }
+
+  const safeCount = clamp(
+    Math.floor(toNumber(count, 8)),
+    1,
+    16
+  );
+
+  container.classList.add('is-loading');
+
+  container.setAttribute(
+    'aria-busy',
+    'true'
+  );
+
+  container.innerHTML = Array.from(
+    { length: safeCount },
+    (_, index) =>
+      renderSkeletonCard(index + 1)
+  ).join('');
+}
+
+function finishGridLoading(container) {
+  if (!container) {
+    return;
+  }
+
+  container.classList.remove('is-loading');
+
+  container.setAttribute(
+    'aria-busy',
+    'false'
   );
 }
 
@@ -97,7 +290,9 @@ export function getFormattedPrice(basePrice, targetCurrency = null) {
 
 export async function loadProducts() {
   if (!isFirebaseInitialized()) {
-    throw new Error('Firebase not initialized');
+    throw new Error(
+      'Firebase not initialized'
+    );
   }
 
   try {
@@ -109,15 +304,17 @@ export async function loadProducts() {
 
     const products = [];
 
-    querySnapshot.forEach((productDoc) => {
-      products.push({
-        id: productDoc.id,
-        ...productDoc.data()
-      });
-    });
+    querySnapshot.forEach(
+      (productDoc) => {
+        products.push({
+          id: productDoc.id,
+          ...productDoc.data()
+        });
+      }
+    );
 
     console.log(
-      `✅ Loaded ${products.length} products`
+      `Loaded ${products.length} products`
     );
 
     return products;
@@ -137,33 +334,37 @@ export async function loadProductsByFilter(
   maxResults = 50
 ) {
   if (!isFirebaseInitialized()) {
-    throw new Error('Firebase not initialized');
+    throw new Error(
+      'Firebase not initialized'
+    );
   }
 
   try {
     const productsCollection =
       collection(db, 'products');
 
-    const q = query(
+    const productsQuery = query(
       productsCollection,
       where(field, '==', value),
       limit(maxResults)
     );
 
     const querySnapshot =
-      await getDocs(q);
+      await getDocs(productsQuery);
 
     const products = [];
 
-    querySnapshot.forEach((productDoc) => {
-      products.push({
-        id: productDoc.id,
-        ...productDoc.data()
-      });
-    });
+    querySnapshot.forEach(
+      (productDoc) => {
+        products.push({
+          id: productDoc.id,
+          ...productDoc.data()
+        });
+      }
+    );
 
     console.log(
-      `✅ Loaded ${products.length} products with ${field}=${value}`
+      `Loaded ${products.length} products where ${field}=${value}`
     );
 
     return products;
@@ -239,15 +440,19 @@ export async function loadProductById(
   productId
 ) {
   if (!isFirebaseInitialized()) {
-    throw new Error('Firebase not initialized');
+    throw new Error(
+      'Firebase not initialized'
+    );
   }
 
   if (!productId) {
-    throw new Error('Product ID is required');
+    throw new Error(
+      'Product ID is required'
+    );
   }
 
   try {
-    const productDoc = await getDoc(
+    const productDocument = await getDoc(
       doc(
         db,
         'products',
@@ -255,13 +460,15 @@ export async function loadProductById(
       )
     );
 
-    if (!productDoc.exists()) {
-      throw new Error('Product not found');
+    if (!productDocument.exists()) {
+      throw new Error(
+        'Product not found'
+      );
     }
 
     return {
-      id: productDoc.id,
-      ...productDoc.data()
+      id: productDocument.id,
+      ...productDocument.data()
     };
   } catch (error) {
     console.error(
@@ -284,7 +491,7 @@ export async function loadDealProducts(
     const productsCollection =
       collection(db, 'products');
 
-    const q = query(
+    const dealsQuery = query(
       productsCollection,
       where('discount', '>', 0),
       orderBy('discount', 'desc'),
@@ -292,51 +499,53 @@ export async function loadDealProducts(
     );
 
     const querySnapshot =
-      await getDocs(q);
+      await getDocs(dealsQuery);
 
     const products = [];
     const now = new Date();
 
-    querySnapshot.forEach((productDoc) => {
-      const data = productDoc.data();
+    querySnapshot.forEach(
+      (productDoc) => {
+        const data =
+          productDoc.data();
 
-      let isValidDeal = true;
+        let isValidDeal = true;
 
-      if (data.dealExpiration) {
-        let expirationDate;
+        if (data.dealExpiration) {
+          let expirationDate;
 
-        if (
-          data.dealExpiration &&
-          typeof data.dealExpiration.toDate ===
+          if (
+            typeof data.dealExpiration.toDate ===
             'function'
-        ) {
-          expirationDate =
-            data.dealExpiration.toDate();
-        } else {
-          expirationDate =
-            new Date(data.dealExpiration);
+          ) {
+            expirationDate =
+              data.dealExpiration.toDate();
+          } else {
+            expirationDate =
+              new Date(data.dealExpiration);
+          }
+
+          if (
+            Number.isNaN(
+              expirationDate.getTime()
+            ) ||
+            expirationDate <= now
+          ) {
+            isValidDeal = false;
+          }
         }
 
-        if (
-          Number.isNaN(
-            expirationDate.getTime()
-          ) ||
-          expirationDate <= now
-        ) {
-          isValidDeal = false;
+        if (isValidDeal) {
+          products.push({
+            id: productDoc.id,
+            ...data
+          });
         }
       }
-
-      if (isValidDeal) {
-        products.push({
-          id: productDoc.id,
-          ...data
-        });
-      }
-    });
+    );
 
     console.log(
-      `✅ Loaded ${products.length} deal products`
+      `Loaded ${products.length} deal products`
     );
 
     return products;
@@ -351,7 +560,129 @@ export async function loadDealProducts(
 }
 
 /* ================================
-   PRODUCT RENDERING
+   PRODUCT BADGES
+   ================================ */
+
+function renderProductBadge(product) {
+  if (product.featured) {
+    return `
+      <span class="product-badge">
+        Featured
+      </span>
+    `;
+  }
+
+  if (product.trending) {
+    return `
+      <span class="product-badge trending">
+        Trending
+      </span>
+    `;
+  }
+
+  if (product.bestseller) {
+    return `
+      <span class="product-badge bestseller">
+        Bestseller
+      </span>
+    `;
+  }
+
+  if (product.newArrival) {
+    return `
+      <span class="product-badge new">
+        New
+      </span>
+    `;
+  }
+
+  return '';
+}
+
+/* ================================
+   PRODUCT STAR RATING
+   ================================ */
+
+function renderStars(rating) {
+  const safeRating = clamp(
+    toNumber(rating),
+    0,
+    5
+  );
+
+  const fullStars =
+    Math.floor(safeRating);
+
+  const hasHalfStar =
+    safeRating - fullStars >= 0.5;
+
+  const emptyStars =
+    5 -
+    fullStars -
+    (hasHalfStar ? 1 : 0);
+
+  let html = '';
+
+  for (
+    let index = 0;
+    index < fullStars;
+    index++
+  ) {
+    html += `
+      <svg
+        class="rating-star filled"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+    `;
+  }
+
+  if (hasHalfStar) {
+    html += `
+      <svg
+        class="rating-star half"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+    `;
+  }
+
+  for (
+    let index = 0;
+    index < emptyStars;
+    index++
+  ) {
+    html += `
+      <svg
+        class="rating-star empty"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        aria-hidden="true"
+      >
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+    `;
+  }
+
+  return html;
+}
+
+/* ================================
+   PRODUCT CARD RENDERING
    ================================ */
 
 export function renderProductCard(
@@ -359,25 +690,33 @@ export function renderProductCard(
   currency = null
 ) {
   const selectedCurrency =
-    currency || getCurrentCurrency();
+    currency ||
+    getCurrentCurrency();
 
-  const basePrice =
-    Number(
+  const basePrice = Math.max(
+    0,
+    toNumber(
       product.basePrice ??
       product.price ??
       0
-    );
+    )
+  );
 
-  const originalPrice =
-    Number(
+  const originalPrice = Math.max(
+    0,
+    toNumber(
       product.originalPrice ??
       basePrice
-    );
+    )
+  );
 
-  const discount =
-    Number(product.discount ?? 0);
+  const discount = clamp(
+    toNumber(product.discount),
+    0,
+    100
+  );
 
-  const currentPrice =
+  const currentPriceConverted =
     convertCurrency(
       basePrice,
       selectedCurrency
@@ -391,7 +730,7 @@ export function renderProductCard(
 
   const formattedCurrentPrice =
     formatPrice(
-      currentPrice,
+      currentPriceConverted,
       selectedCurrency
     );
 
@@ -401,106 +740,98 @@ export function renderProductCard(
       selectedCurrency
     );
 
+  const showOriginalPrice =
+    discount > 0 &&
+    originalPrice > basePrice;
+
   const imageUrl =
-    product.thumbnail ||
-    (
-      Array.isArray(product.images)
-        ? product.images[0]
-        : ''
-    ) ||
-    '/assets/images/placeholder.jpg';
+    getProductImage(product);
 
-  const rating =
-    Math.min(
-      5,
-      Math.max(
-        0,
-        Number(product.rating || 0)
-      )
-    );
+  const safeImageUrl =
+    escapeHtml(imageUrl);
 
-  const stars =
-    renderStars(rating);
+  const rating = clamp(
+    toNumber(product.rating),
+    0,
+    5
+  );
 
-  let badge = '';
-
-  if (product.featured) {
-    badge =
-      '<span class="product-badge">Featured</span>';
-  } else if (product.trending) {
-    badge =
-      '<span class="product-badge trending">Trending</span>';
-  } else if (product.bestseller) {
-    badge =
-      '<span class="product-badge bestseller">Bestseller</span>';
-  } else if (product.newArrival) {
-    badge =
-      '<span class="product-badge new">New</span>';
-  }
+  const reviewCount = Math.max(
+    0,
+    toNumber(product.reviewCount)
+  );
 
   const productId =
     escapeHtml(
-      String(product.id || '')
+      safeText(product.id)
     );
 
   const title =
     escapeHtml(
-      product.title ||
-      'Untitled Product'
+      safeText(
+        product.title,
+        DEFAULT_PRODUCT_TITLE
+      )
     );
 
   const category =
     escapeHtml(
-      product.category ||
-      'Gadgets'
-    );
-
-  const safeImageUrl =
-    escapeHtml(
-      String(imageUrl)
-    );
-
-  const affiliateUrl =
-    product.affiliateUrl
-      ? escapeHtml(
-          String(product.affiliateUrl)
-        )
-      : '';
-
-  const reviewCount =
-    Number(
-      product.reviewCount || 0
-    );
-
-  const safeDiscount =
-    Math.max(
-      0,
-      Math.min(
-        100,
-        discount
+      safeText(
+        product.category,
+        DEFAULT_PRODUCT_CATEGORY
       )
     );
 
+  const safeCurrency =
+    escapeHtml(selectedCurrency);
+
+  const safeDiscount =
+    Math.round(discount);
+
+  const badge =
+    renderProductBadge(product);
+
+  const stars =
+    renderStars(rating);
+
+  const affiliateUrl =
+    getSafeExternalUrl(
+      product.affiliateUrl
+    );
+
   return `
-    <div
+    <article
       class="product-card"
       data-product-id="${productId}"
     >
       <div class="product-image-container">
+
         <img
           src="${safeImageUrl}"
           alt="${title}"
           class="product-image"
           loading="lazy"
+          decoding="async"
         >
 
         ${badge}
 
+        ${
+          showOriginalPrice
+            ? `
+              <span class="product-sale-badge">
+                -${safeDiscount}%
+              </span>
+            `
+            : ''
+        }
+
         <button
           class="product-favorite"
           data-product-id="${productId}"
-          aria-label="Add to favorites"
           type="button"
+          aria-label="Add to favorites"
+          aria-pressed="false"
         >
           <svg
             width="20"
@@ -509,6 +840,8 @@ export function renderProductCard(
             fill="none"
             stroke="currentColor"
             stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
             aria-hidden="true"
           >
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -517,6 +850,7 @@ export function renderProductCard(
       </div>
 
       <div class="product-content">
+
         <p class="product-category">
           ${category}
         </p>
@@ -525,10 +859,17 @@ export function renderProductCard(
           ${title}
         </h3>
 
-        <div class="product-rating">
-          <div class="product-stars">
+        <div
+          class="product-rating"
+          aria-label="Rating ${rating} out of 5"
+        >
+          <span class="product-stars">
             ${stars}
-          </div>
+          </span>
+
+          <span class="product-rating-value">
+            ${rating.toFixed(1)}
+          </span>
 
           <span class="product-review-count">
             (${reviewCount})
@@ -536,21 +877,22 @@ export function renderProductCard(
         </div>
 
         <div class="product-price">
+
           <span
             class="product-price-current"
             data-base-price="${basePrice}"
-            data-currency="${escapeHtml(selectedCurrency)}"
+            data-currency="${safeCurrency}"
           >
             ${formattedCurrentPrice}
           </span>
 
           ${
-            safeDiscount > 0
+            showOriginalPrice
               ? `
                 <span
                   class="product-price-original"
                   data-base-price="${originalPrice}"
-                  data-currency="${escapeHtml(selectedCurrency)}"
+                  data-currency="${safeCurrency}"
                 >
                   ${formattedOriginalPrice}
                 </span>
@@ -561,9 +903,11 @@ export function renderProductCard(
               `
               : ''
           }
+
         </div>
 
         <div class="product-actions">
+
           ${
             affiliateUrl
               ? `
@@ -572,6 +916,7 @@ export function renderProductCard(
                   class="btn btn-primary"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Shop ${title} on AliExpress"
                 >
                   Shop on AliExpress
                 </a>
@@ -579,105 +924,24 @@ export function renderProductCard(
               : `
                 <button
                   class="btn btn-outline"
-                  disabled
                   type="button"
+                  disabled
                 >
                   Unavailable
                 </button>
               `
           }
+
         </div>
+
       </div>
-    </div>
+    </article>
   `;
 }
 
-function renderStars(rating) {
-  const safeRating =
-    Math.min(
-      5,
-      Math.max(
-        0,
-        Number(rating) || 0
-      )
-    );
-
-  const fullStars =
-    Math.floor(safeRating);
-
-  const hasHalfStar =
-    safeRating % 1 >= 0.5;
-
-  const emptyStars =
-    Math.max(
-      0,
-      5 -
-        fullStars -
-        (hasHalfStar ? 1 : 0)
-    );
-
-  let html = '';
-
-  for (
-    let i = 0;
-    i < fullStars;
-    i++
-  ) {
-    html += `
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        stroke="currentColor"
-        stroke-width="2"
-        aria-hidden="true"
-      >
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-      </svg>
-    `;
-  }
-
-  if (hasHalfStar) {
-    html += `
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        stroke="currentColor"
-        stroke-width="2"
-        style="opacity: 0.5;"
-        aria-hidden="true"
-      >
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-      </svg>
-    `;
-  }
-
-  for (
-    let i = 0;
-    i < emptyStars;
-    i++
-  ) {
-    html += `
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        style="opacity: 0.3;"
-        aria-hidden="true"
-      >
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-      </svg>
-    `;
-  }
-
-  return html;
-}
+/* ================================
+   PRODUCT GRID RENDERING
+   ================================ */
 
 export function renderProductsGrid(
   products,
@@ -685,14 +949,13 @@ export function renderProductsGrid(
   currency = null
 ) {
   const container =
-    document.getElementById(
-      containerId
-    );
+    document.getElementById(containerId);
 
   if (!container) {
     console.warn(
-      `Container ${containerId} not found`
+      `Product container "${containerId}" not found`
     );
+
     return;
   }
 
@@ -700,14 +963,17 @@ export function renderProductsGrid(
     !Array.isArray(products) ||
     products.length === 0
   ) {
+    finishGridLoading(container);
+
     showEmptyState(
       container,
       'No products found'
     );
+
     return;
   }
 
-  const html =
+  container.innerHTML =
     products
       .map((product) =>
         renderProductCard(
@@ -717,54 +983,48 @@ export function renderProductsGrid(
       )
       .join('');
 
-  container.innerHTML = html;
+  finishGridLoading(container);
 
   setupFavoriteButtons(container);
 
-  updateFavoriteButtonStates(
-    container
-  );
+  updateFavoriteButtonStates(container);
 
   console.log(
-    `✅ Rendered ${products.length} products in ${containerId}`
+    `Rendered ${products.length} products in ${containerId}`
   );
 }
 
 /* ================================
-   FAVORITES
+   FAVORITE BUTTONS
    ================================ */
 
-function setupFavoriteButtons(
-  container
-) {
+function setupFavoriteButtons(container) {
   const favoriteButtons =
     container.querySelectorAll(
       '.product-favorite'
     );
 
-  favoriteButtons.forEach(
-    (button) => {
-      button.addEventListener(
-        'click',
-        async (event) => {
-          event.preventDefault();
-          event.stopPropagation();
+  favoriteButtons.forEach((button) => {
+    button.addEventListener(
+      'click',
+      async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
 
-          const productId =
-            button.dataset.productId;
+        const productId =
+          button.dataset.productId;
 
-          if (!productId) {
-            return;
-          }
-
-          await toggleFavorite(
-            productId,
-            button
-          );
+        if (!productId) {
+          return;
         }
-      );
-    }
-  );
+
+        await toggleFavorite(
+          productId,
+          button
+        );
+      }
+    );
+  });
 }
 
 async function updateFavoriteButtonStates(
@@ -786,25 +1046,30 @@ async function updateFavoriteButtonStates(
         '.product-favorite'
       );
 
-    buttons.forEach(
-      (button) => {
-        const productId =
-          button.dataset.productId;
+    buttons.forEach((button) => {
+      const productId =
+        button.dataset.productId;
 
-        if (
-          favoriteSet.has(productId)
-        ) {
-          button.classList.add(
-            'active'
-          );
+      const isFavorite =
+        favoriteSet.has(productId);
 
-          button.setAttribute(
-            'aria-label',
-            'Remove from favorites'
-          );
-        }
-      }
-    );
+      button.classList.toggle(
+        'active',
+        isFavorite
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        String(isFavorite)
+      );
+
+      button.setAttribute(
+        'aria-label',
+        isFavorite
+          ? 'Remove from favorites'
+          : 'Add to favorites'
+      );
+    });
   } catch (error) {
     console.error(
       'Error updating favorite button states:',
@@ -822,6 +1087,7 @@ async function toggleFavorite(
       'Please sign in to add favorites',
       'warning'
     );
+
     return;
   }
 
@@ -830,24 +1096,25 @@ async function toggleFavorite(
       'Service unavailable',
       'error'
     );
+
     return;
   }
 
-  const userId =
-    getUserId();
+  const userId = getUserId();
 
   if (!userId) {
     showToast(
       'Unable to identify your account',
       'error'
     );
+
     return;
   }
 
-  const isActive =
-    button.classList.contains(
-      'active'
-    );
+  const wasActive =
+    button.classList.contains('active');
+
+  button.disabled = true;
 
   try {
     const favoriteRef =
@@ -859,13 +1126,14 @@ async function toggleFavorite(
         productId
       );
 
-    if (isActive) {
-      await deleteDoc(
-        favoriteRef
-      );
+    if (wasActive) {
+      await deleteDoc(favoriteRef);
 
-      button.classList.remove(
-        'active'
+      button.classList.remove('active');
+
+      button.setAttribute(
+        'aria-pressed',
+        'false'
       );
 
       button.setAttribute(
@@ -886,8 +1154,11 @@ async function toggleFavorite(
         }
       );
 
-      button.classList.add(
-        'active'
+      button.classList.add('active');
+
+      button.setAttribute(
+        'aria-pressed',
+        'true'
       );
 
       button.setAttribute(
@@ -912,6 +1183,8 @@ async function toggleFavorite(
       'Failed to update favorites',
       'error'
     );
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -923,8 +1196,7 @@ export async function loadUserFavorites() {
     return [];
   }
 
-  const userId =
-    getUserId();
+  const userId = getUserId();
 
   if (!userId) {
     return [];
@@ -940,22 +1212,16 @@ export async function loadUserFavorites() {
       );
 
     const querySnapshot =
-      await getDocs(
-        favoritesCollection
-      );
+      await getDocs(favoritesCollection);
 
     const favorites = [];
 
-    querySnapshot.forEach(
-      (favoriteDoc) => {
-        favorites.push(
-          favoriteDoc.id
-        );
-      }
-    );
+    querySnapshot.forEach((favoriteDoc) => {
+      favorites.push(favoriteDoc.id);
+    });
 
     console.log(
-      `✅ Loaded ${favorites.length} favorites`
+      `Loaded ${favorites.length} favorites`
     );
 
     return favorites;
@@ -971,9 +1237,7 @@ export async function loadUserFavorites() {
 
 async function updateFavoritesBadge() {
   const badge =
-    document.getElementById(
-      'favoritesBadge'
-    );
+    document.getElementById('favoritesBadge');
 
   if (!badge) {
     return;
@@ -1004,13 +1268,6 @@ async function updateFavoritesBadge() {
    HOMEPAGE PRODUCT STATE
    ================================ */
 
-/*
- * Keep already-loaded homepage data in memory.
- *
- * This allows currency changes to update prices
- * without making new Firestore requests.
- */
-
 let homepageTrendingProducts = [];
 let homepageFeaturedProducts = [];
 let homepageDealProduct = null;
@@ -1021,7 +1278,7 @@ let homepageDealProduct = null;
 
 export async function initializeHomepageProducts() {
   console.log(
-    '🏠 Initializing homepage products...'
+    'Initializing homepage products...'
   );
 
   const trendingContainer =
@@ -1029,20 +1286,31 @@ export async function initializeHomepageProducts() {
       'trendingProductsGrid'
     );
 
-  if (trendingContainer) {
-    showLoading(
-      trendingContainer,
-      'Loading trending products...'
+  const collectionContainer =
+    document.getElementById(
+      'trendingCollectionGrid'
     );
 
-    try {
-      const trendingProducts =
-        await loadTrendingProducts(8);
+  /*
+   * Display skeleton cards immediately before
+   * starting the Firestore requests.
+   */
+  if (trendingContainer) {
+    renderSkeletonGrid(trendingContainer);
+  }
 
+  if (collectionContainer) {
+    renderSkeletonGrid(collectionContainer);
+  }
+
+  const trendingTask = (async () => {
+    if (!trendingContainer) {
+      return;
+    }
+
+    try {
       homepageTrendingProducts =
-        Array.isArray(trendingProducts)
-          ? trendingProducts
-          : [];
+        await loadTrendingProducts(8);
 
       renderProductsGrid(
         homepageTrendingProducts,
@@ -1056,32 +1324,23 @@ export async function initializeHomepageProducts() {
 
       homepageTrendingProducts = [];
 
+      finishGridLoading(trendingContainer);
+
       showError(
         trendingContainer,
         'Failed to load trending products'
       );
     }
-  }
+  })();
 
-  const collectionContainer =
-    document.getElementById(
-      'trendingCollectionGrid'
-    );
-
-  if (collectionContainer) {
-    showLoading(
-      collectionContainer,
-      'Loading collection...'
-    );
+  const collectionTask = (async () => {
+    if (!collectionContainer) {
+      return;
+    }
 
     try {
-      const featuredProducts =
-        await loadFeaturedProducts(8);
-
       homepageFeaturedProducts =
-        Array.isArray(featuredProducts)
-          ? featuredProducts
-          : [];
+        await loadFeaturedProducts(8);
 
       renderProductsGrid(
         homepageFeaturedProducts,
@@ -1089,31 +1348,39 @@ export async function initializeHomepageProducts() {
       );
     } catch (error) {
       console.error(
-        'Error loading collection:',
+        'Error loading featured collection:',
         error
       );
 
       homepageFeaturedProducts = [];
+
+      finishGridLoading(collectionContainer);
 
       showError(
         collectionContainer,
         'Failed to load collection'
       );
     }
-  }
+  })();
 
-  await initializeFeaturedDeal();
+  await Promise.all([
+    trendingTask,
+    collectionTask,
+    initializeFeaturedDeal()
+  ]);
 
   console.log(
-    '✅ Homepage products initialized'
+    'Homepage products initialized'
   );
 }
 
+/* ================================
+   FEATURED DEAL
+   ================================ */
+
 async function initializeFeaturedDeal() {
   const dealContainer =
-    document.getElementById(
-      'dealCard'
-    );
+    document.getElementById('dealCard');
 
   if (!dealContainer) {
     return;
@@ -1128,9 +1395,7 @@ async function initializeFeaturedDeal() {
     const dealProducts =
       await loadDealProducts(1);
 
-    if (
-      dealProducts.length === 0
-    ) {
+    if (dealProducts.length === 0) {
       homepageDealProduct = null;
 
       showEmptyState(
@@ -1141,14 +1406,11 @@ async function initializeFeaturedDeal() {
       return;
     }
 
-    const deal =
+    homepageDealProduct =
       dealProducts[0];
 
-    homepageDealProduct =
-      deal;
-
     renderFeaturedDeal(
-      deal,
+      homepageDealProduct,
       dealContainer
     );
   } catch (error) {
@@ -1173,34 +1435,32 @@ function renderFeaturedDeal(
   const currency =
     getCurrentCurrency();
 
-  const basePrice =
-    Number(
+  const basePrice = Math.max(
+    0,
+    toNumber(
       product.basePrice ??
       product.price ??
       0
-    );
+    )
+  );
 
-  const originalPrice =
-    Number(
+  const originalPrice = Math.max(
+    0,
+    toNumber(
       product.originalPrice ??
       basePrice
-    );
+    )
+  );
 
-  const currentPrice =
-    convertCurrency(
-      basePrice,
-      currency
-    );
+  const currentPriceConverted =
+    convertCurrency(basePrice, currency);
 
   const originalPriceConverted =
-    convertCurrency(
-      originalPrice,
-      currency
-    );
+    convertCurrency(originalPrice, currency);
 
   const formattedCurrentPrice =
     formatPrice(
-      currentPrice,
+      currentPriceConverted,
       currency
     );
 
@@ -1211,79 +1471,60 @@ function renderFeaturedDeal(
     );
 
   const imageUrl =
-    product.thumbnail ||
-    (
-      Array.isArray(product.images)
-        ? product.images[0]
-        : ''
-    ) ||
-    '/assets/images/placeholder.jpg';
+    getProductImage(product);
+
+  const safeImageUrl =
+    escapeHtml(imageUrl);
+
+  const title =
+    escapeHtml(
+      safeText(
+        product.title,
+        'Featured Deal'
+      )
+    );
+
+  const affiliateUrl =
+    getSafeExternalUrl(
+      product.affiliateUrl
+    );
+
+  const discount = clamp(
+    toNumber(product.discount),
+    0,
+    100
+  );
 
   let expirationDate = null;
 
   if (product.dealExpiration) {
-    if (
-      typeof product.dealExpiration.toDate ===
+    try {
+      expirationDate =
+        typeof product.dealExpiration.toDate ===
         'function'
-    ) {
-      expirationDate =
-        product.dealExpiration.toDate();
-    } else {
-      expirationDate =
-        new Date(
-          product.dealExpiration
-        );
-    }
+          ? product.dealExpiration.toDate()
+          : new Date(product.dealExpiration);
 
-    if (
-      Number.isNaN(
-        expirationDate.getTime()
-      )
-    ) {
+      if (
+        Number.isNaN(
+          expirationDate.getTime()
+        )
+      ) {
+        expirationDate = null;
+      }
+    } catch (error) {
       expirationDate = null;
     }
   }
 
   const countdownHtml =
     expirationDate
-      ? renderCountdown(
-          expirationDate
-        )
+      ? renderCountdown()
       : '';
-
-  const title =
-    escapeHtml(
-      product.title ||
-      'Featured Deal'
-    );
-
-  const safeImageUrl =
-    escapeHtml(
-      String(imageUrl)
-    );
-
-  const affiliateUrl =
-    product.affiliateUrl
-      ? escapeHtml(
-          String(
-            product.affiliateUrl
-          )
-        )
-      : '';
-
-  const discount =
-    Math.max(
-      0,
-      Math.min(
-        100,
-        Number(
-          product.discount || 0
-        )
-      )
-    );
 
   container.innerHTML = `
     <div class="deal-content">
+
       <h3>Limited Time Deal!</h3>
 
       <p class="deal-title">
@@ -1293,6 +1534,7 @@ function renderFeaturedDeal(
       ${countdownHtml}
 
       <div class="deal-price">
+
         <span
           class="deal-price-current"
           data-base-price="${basePrice}"
@@ -1301,17 +1543,30 @@ function renderFeaturedDeal(
           ${formattedCurrentPrice}
         </span>
 
-        <span
-          class="deal-price-original"
-          data-base-price="${originalPrice}"
-          data-currency="${escapeHtml(currency)}"
-        >
-          ${formattedOriginalPrice}
-        </span>
+        ${
+          originalPrice > basePrice
+            ? `
+              <span
+                class="deal-price-original"
+                data-base-price="${originalPrice}"
+                data-currency="${escapeHtml(currency)}"
+              >
+                ${formattedOriginalPrice}
+              </span>
+            `
+            : ''
+        }
 
-        <span class="deal-discount">
-          Save ${discount}%
-        </span>
+        ${
+          discount > 0
+            ? `
+              <span class="deal-discount">
+                Save ${Math.round(discount)}%
+              </span>
+            `
+            : ''
+        }
+
       </div>
 
       ${
@@ -1328,6 +1583,7 @@ function renderFeaturedDeal(
           `
           : ''
       }
+
     </div>
 
     <div class="deal-image">
@@ -1335,6 +1591,7 @@ function renderFeaturedDeal(
         src="${safeImageUrl}"
         alt="${title}"
         loading="lazy"
+        decoding="async"
       >
     </div>
   `;
@@ -1347,23 +1604,23 @@ function renderFeaturedDeal(
   }
 }
 
-function renderCountdown(
-  expirationDate
-) {
+/* ================================
+   DEAL COUNTDOWN
+   ================================ */
+
+function renderCountdown() {
   return `
     <div
       class="deal-timer"
       id="dealTimer"
+      aria-label="Time remaining for this deal"
     >
       <div class="timer-unit">
         <span
           class="timer-value"
           data-unit="days"
         >00</span>
-
-        <span class="timer-label">
-          Days
-        </span>
+        <span class="timer-label">Days</span>
       </div>
 
       <div class="timer-unit">
@@ -1371,10 +1628,7 @@ function renderCountdown(
           class="timer-value"
           data-unit="hours"
         >00</span>
-
-        <span class="timer-label">
-          Hours
-        </span>
+        <span class="timer-label">Hours</span>
       </div>
 
       <div class="timer-unit">
@@ -1382,10 +1636,7 @@ function renderCountdown(
           class="timer-value"
           data-unit="minutes"
         >00</span>
-
-        <span class="timer-label">
-          Minutes
-        </span>
+        <span class="timer-label">Minutes</span>
       </div>
 
       <div class="timer-unit">
@@ -1393,10 +1644,7 @@ function renderCountdown(
           class="timer-value"
           data-unit="seconds"
         >00</span>
-
-        <span class="timer-label">
-          Seconds
-        </span>
+        <span class="timer-label">Seconds</span>
       </div>
     </div>
   `;
@@ -1409,25 +1657,19 @@ function startCountdown(
   let timerId = null;
 
   function updateCountdown() {
-    const now =
-      new Date();
-
-    const diff =
+    const difference =
       expirationDate.getTime() -
-      now.getTime();
+      Date.now();
 
-    if (diff <= 0) {
+    if (difference <= 0) {
       const timer =
-        container.querySelector(
-          '#dealTimer'
-        );
+        container.querySelector('#dealTimer');
 
       if (timer) {
-        timer.innerHTML =
-          '<p style="color: var(--color-error);">Deal Expired</p>';
+        timer.textContent = 'Deal expired';
       }
 
-      if (timerId) {
+      if (timerId !== null) {
         clearTimeout(timerId);
       }
 
@@ -1436,94 +1678,53 @@ function startCountdown(
 
     const days =
       Math.floor(
-        diff /
-          (1000 * 60 * 60 * 24)
+        difference / (1000 * 60 * 60 * 24)
       );
 
     const hours =
       Math.floor(
         (
-          diff %
-          (1000 * 60 * 60 * 24)
-        ) /
-          (1000 * 60 * 60)
+          difference % (1000 * 60 * 60 * 24)
+        ) / (1000 * 60 * 60)
       );
 
     const minutes =
       Math.floor(
         (
-          diff %
-          (1000 * 60 * 60)
-        ) /
-          (1000 * 60)
+          difference % (1000 * 60 * 60)
+        ) / (1000 * 60)
       );
 
     const seconds =
       Math.floor(
-        (
-          diff %
-          (1000 * 60)
-        ) /
-          1000
+        (difference % (1000 * 60)) / 1000
       );
 
-    const daysEl =
-      container.querySelector(
-        '[data-unit="days"]'
-      );
+    const values = {
+      days,
+      hours,
+      minutes,
+      seconds
+    };
 
-    const hoursEl =
-      container.querySelector(
-        '[data-unit="hours"]'
-      );
+    Object.entries(values).forEach(
+      ([unit, value]) => {
+        const element =
+          container.querySelector(
+            `[data-unit="${unit}"]`
+          );
 
-    const minutesEl =
-      container.querySelector(
-        '[data-unit="minutes"]'
-      );
+        if (element) {
+          element.textContent =
+            String(value).padStart(2, '0');
+        }
+      }
+    );
 
-    const secondsEl =
-      container.querySelector(
-        '[data-unit="seconds"]'
-      );
-
-    if (daysEl) {
-      daysEl.textContent =
-        String(days).padStart(
-          2,
-          '0'
-        );
-    }
-
-    if (hoursEl) {
-      hoursEl.textContent =
-        String(hours).padStart(
-          2,
-          '0'
-        );
-    }
-
-    if (minutesEl) {
-      minutesEl.textContent =
-        String(minutes).padStart(
-          2,
-          '0'
-        );
-    }
-
-    if (secondsEl) {
-      secondsEl.textContent =
-        String(seconds).padStart(
-          2,
-          '0'
-        );
-    }
-
-    timerId =
-      setTimeout(
-        updateCountdown,
-        1000
-      );
+    timerId = setTimeout(
+      updateCountdown,
+      1000
+    );
   }
 
   updateCountdown();
@@ -1533,13 +1734,6 @@ function startCountdown(
    CURRENCY CHANGE HANDLING
    ================================ */
 
-/**
- * Update already-rendered product prices
- * without reloading products from Firestore.
- *
- * Prices store their original USD/base value
- * in data-base-price attributes.
- */
 function updateRenderedProductPrices() {
   const currency =
     getCurrentCurrency();
@@ -1549,50 +1743,37 @@ function updateRenderedProductPrices() {
       '[data-base-price]'
     );
 
-  priceElements.forEach(
-    (priceElement) => {
-      const basePrice =
-        Number(
-          priceElement.dataset.basePrice
-        );
+  priceElements.forEach((priceElement) => {
+    const basePrice =
+      Number(priceElement.dataset.basePrice);
 
-      if (
-        !Number.isFinite(basePrice)
-      ) {
-        return;
-      }
-
-      const convertedPrice =
-        convertCurrency(
-          basePrice,
-          currency
-        );
-
-      priceElement.textContent =
-        formatPrice(
-          convertedPrice,
-          currency
-        );
-
-      priceElement.dataset.currency =
-        currency;
+    if (!Number.isFinite(basePrice)) {
+      return;
     }
-  );
+
+    const convertedPrice =
+      convertCurrency(
+        basePrice,
+        currency
+      );
+
+    priceElement.textContent =
+      formatPrice(
+        convertedPrice,
+        currency
+      );
+
+    priceElement.dataset.currency =
+      currency;
+  });
 }
 
 document.addEventListener(
   'currencyChanged',
   () => {
     console.log(
-      '💱 Currency changed, updating product prices...'
+      'Currency changed; updating product prices...'
     );
-
-    /*
-     * Do not reload Firestore products.
-     * app.js already updated the centralized
-     * exchange-rate state before dispatching
-     * currencyChanged.
-     */
 
     updateRenderedProductPrices();
   }
@@ -1603,18 +1784,10 @@ document.addEventListener(
    ================================ */
 
 /*
- * IMPORTANT:
- * Homepage initialization is intentionally NOT
- * performed here.
- *
- * app.js is the single orchestrator for
- * homepage initialization and dynamically loads
- * this module when needed.
- *
- * This prevents duplicate initialization because
- * categories.js also depends on this module.
+ * app.js controls homepage initialization.
+ * Do not auto-initialize from this module.
  */
 
 console.log(
-  '📦 Products module loaded'
+  'Products module loaded'
 );
