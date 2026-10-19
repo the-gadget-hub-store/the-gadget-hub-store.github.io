@@ -56,20 +56,8 @@ const CURRENCY_CACHE_KEY =
 const CURRENCY_CACHE_TTL =
   6 * 60 * 60 * 1000;
 
-/*
- * Use a NEW key for explicit manual selection.
- * The old "selectedCurrency" value may have been
- * saved automatically or during earlier testing.
- * Do not treat that legacy value as manual choice.
- */
 const SELECTED_CURRENCY_KEY =
   'gadgetHubManualCurrency_v2';
-
-/*
- * Country results are intentionally NOT cached here.
- * Every fresh page initialization attempts to detect
- * the visitor's current public-IP country.
- */
 
 const FALLBACK_EXCHANGE_RATES = {
   USD: 1.0,
@@ -182,10 +170,6 @@ async function initializeCurrencySelector() {
     supportedCurrencies =
       await loadSupportedCurrencies();
 
-    /*
-     * Manual choice is honored only when saved
-     * using the new manual-selection key.
-     */
     selectedCurrency =
       await loadCurrencyPreference();
 
@@ -289,99 +273,173 @@ function getDefaultCurrencies() {
    ================================ */
 
 /*
- * Detect country from public IP.
+ * Query multiple independent IP-country services.
  *
- * Primary provider: ipapi.co
- * Backup provider: ipwho.is
+ * Important:
+ * IP geolocation is an estimate. VPNs, proxies,
+ * mobile carrier routing, and provider database
+ * errors can return an incorrect country.
  *
- * No country cache is used. A stale country
- * result must not override the current visit.
+ * We collect results from all providers instead
+ * of returning the first successful response.
  */
+
+async function fetchCountryFromProvider(provider) {
+  let timer;
+
+  try {
+    const controller = new AbortController();
+
+    timer = setTimeout(() => {
+      controller.abort();
+    }, 5000);
+
+    const response = await fetch(provider.url, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json'
+      },
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Country API returned ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+
+    const rawCountry = provider.parse(data);
+
+    const country = String(rawCountry || '')
+      .trim()
+      .toUpperCase();
+
+    if (!/^[A-Z]{2}$/.test(country)) {
+      throw new Error(
+        'Invalid country code returned by provider'
+      );
+    }
+
+    console.log(
+      `🌍 Country provider ${provider.name}:`,
+      country
+    );
+
+    return {
+      provider: provider.name,
+      country
+    };
+  } catch (error) {
+    console.warn(
+      `Country provider failed: ${provider.name}`,
+      error
+    );
+
+    return null;
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 async function detectCountryFromIP() {
   const providers = [
     {
+      name: 'ipapi.co',
       url: 'https://ipapi.co/json/',
       parse: data => data?.country_code
     },
     {
+      name: 'ipwho.is',
       url: 'https://ipwho.is/',
       parse: data =>
         data?.success === true
           ? data.country_code
           : null
+    },
+    {
+      name: 'ipinfo.io',
+      url: 'https://ipinfo.io/json',
+      parse: data => data?.country
     }
   ];
 
-  for (const provider of providers) {
-    let timer;
-
-    try {
-      const controller = new AbortController();
-
-      timer = setTimeout(() => {
-        controller.abort();
-      }, 4000);
-
-      const response = await fetch(provider.url, {
-        method: 'GET',
-        signal: controller.signal,
-        headers: {
-          Accept: 'application/json'
-        },
-        cache: 'no-store'
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `Country API returned ${response.status}`
-        );
-      }
-
-      const data = await response.json();
-
-      const country = String(
-        provider.parse(data) || ''
-      ).trim().toUpperCase();
-
-      if (!/^[A-Z]{2}$/.test(country)) {
-        throw new Error(
-          'Invalid country code returned by API'
-        );
-      }
-
-      console.log(
-        '🌍 Country detected by IP:',
-        country,
-        'Source:',
-        provider.url
-      );
-
-      return country;
-    } catch (error) {
-      console.warn(
-        'Country detection provider failed:',
-        provider.url,
-        error
-      );
-    } finally {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    }
-  }
-
-  console.error(
-    'Country detection failed on all providers.'
+  /*
+   * Run requests concurrently so one slow provider
+   * does not prevent us from receiving other results.
+   */
+  const results = await Promise.all(
+    providers.map(fetchCountryFromProvider)
   );
 
-  return null;
+  const validResults = results.filter(Boolean);
+
+  if (!validResults.length) {
+    console.error(
+      'Country detection failed on all providers.'
+    );
+
+    return null;
+  }
+
+  const counts = {};
+
+  validResults.forEach(result => {
+    counts[result.country] =
+      (counts[result.country] || 0) + 1;
+  });
+
+  const rankedCountries = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1]);
+
+  const [bestCountry, bestCount] =
+    rankedCountries[0];
+
+  /*
+   * If two or more providers agree, use their
+   * majority result.
+   */
+  if (bestCount >= 2) {
+    console.log(
+      '🌍 Country selected by provider agreement:',
+      bestCountry,
+      `(${bestCount}/${validResults.length})`
+    );
+
+    return bestCountry;
+  }
+
+  /*
+   * If providers disagree, do not silently pretend
+   * that the result is certain. Use the first
+   * successful provider as a best-effort result
+   * and log the disagreement for debugging.
+   */
+  if (rankedCountries.length > 1) {
+    console.warn(
+      '⚠️ IP-country providers disagree:',
+      validResults
+    );
+  }
+
+  const chosenCountry = validResults[0].country;
+
+  console.log(
+    '🌍 Best-effort country selected:',
+    chosenCountry
+  );
+
+  return chosenCountry;
 }
 
-/*
- * Map supported country codes to store currencies.
- * Countries with unsupported local currencies use
- * the configured default instead of a guessed currency.
- */
+/* ================================
+   COUNTRY TO CURRENCY MAPPING
+   ================================ */
+
 function currencyFromDetectedCountry(countryCode) {
   if (!countryCode) {
     return null;
@@ -446,12 +504,6 @@ function currencyFromDetectedCountry(countryCode) {
   return null;
 }
 
-/*
- * Browser language is deliberately NOT used to
- * determine country. A language such as en-US does
- * not prove the visitor is physically in the USA.
- */
-
 /* ================================
    CURRENCY VALIDATION
    ================================ */
@@ -465,17 +517,17 @@ function isSupportedCurrency(currencyCode) {
 }
 
 /*
- * Currency selection priority:
+ * Selection priority:
  *
- * 1. Explicit manual selection saved with the new key
- * 2. Current IP country detection
- * 3. Configured store default currency
+ * 1. Explicit manual choice saved by the visitor
+ * 2. Currency mapped from detected IP country
+ * 3. Admin-configured default currency
  * 4. USD fallback
  *
- * The legacy "selectedCurrency" key is intentionally
- * ignored because it may contain an old automatic
- * choice or a test value.
+ * Automatic detection never saves its result as
+ * a manual preference.
  */
+
 async function loadCurrencyPreference() {
   try {
     const savedCurrency =
@@ -518,16 +570,12 @@ async function loadCurrencyPreference() {
     return detectedCurrency;
   }
 
-  /*
-   * If country detection fails, do not guess using
-   * browser language or a stale country result.
-   */
   if (
     appSettings?.defaultCurrency &&
     isSupportedCurrency(appSettings.defaultCurrency)
   ) {
     console.warn(
-      'Country unknown. Using configured default:',
+      'Country unknown or unsupported. Using configured default:',
       appSettings.defaultCurrency
     );
 
@@ -535,7 +583,7 @@ async function loadCurrencyPreference() {
   }
 
   console.warn(
-    'Country unknown. Using USD fallback.'
+    'Country unknown or unsupported. Using USD fallback.'
   );
 
   return 'USD';
@@ -1033,10 +1081,6 @@ async function selectCurrency(currencyCode) {
 
   selectedCurrency = normalizedCurrency;
 
-  /*
-   * Save only explicit user selections.
-   * Automatic detection never writes this key.
-   */
   try {
     localStorage.setItem(
       SELECTED_CURRENCY_KEY,
