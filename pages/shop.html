@@ -6,19 +6,480 @@
     <meta name="description" content="Shop the latest gadgets and tech accessories. Browse our complete collection of innovative products.">
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-    
+
     <title>Shop - The Gadget Hub Store</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/animations.css">
     <link rel="stylesheet" href="../css/responsive.css">
+
+    <!-- SHOP PAGE RESPONSIVE FIXES -->
+    <style>
+        /* Prevent shop layout from overflowing */
+        .shop-layout {
+            display: grid;
+            grid-template-columns: 250px minmax(0, 1fr);
+            align-items: start;
+            gap: 24px;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .shop-filters,
+        .shop-main,
+        #shopProductsGrid {
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .shop-main {
+            width: 100%;
+        }
+
+        .shop-header {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .shop-header h1 {
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+
+        .shop-header p {
+            line-height: 1.6;
+        }
+
+        .shop-controls {
+            width: 100%;
+            min-width: 0;
+        }
+
+        #productCount {
+            overflow-wrap: anywhere;
+        }
+
+        #categoryFilters {
+            min-width: 0;
+        }
+
+        #categoryFilters label {
+            min-width: 0;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+        }
+
+        #categoryFilters input[type="radio"] {
+            flex: 0 0 auto;
+        }
+
+        #sortSelect {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+        }
+
+        /* Product grid base */
+        #shopProductsGrid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: start;
+            gap: 16px;
+        }
+
+        #shopProductsGrid > * {
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        /* Product image stays square */
+        #shopProductsGrid .product-image-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            padding-top: 0 !important;
+            overflow: hidden;
+        }
+
+        #shopProductsGrid .product-image-container img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Loading state spans both grid columns */
+        #shopProductsGrid > .products-loading,
+        #shopProductsGrid > .loading-state,
+        #shopProductsGrid > .error-state,
+        #shopProductsGrid > .empty-state {
+            grid-column: 1 / -1;
+            width: 100%;
+            min-width: 0;
+        }
+
+        /* Category toggle is only shown on mobile */
+        .shop-mobile-category-toggle {
+            display: none;
+        }
+
+        /* MOBILE LAYOUT */
+        @media (max-width: 767px) {
+            main.container {
+                padding-top: 24px !important;
+                padding-bottom: 40px !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+                width: 100%;
+                max-width: 100%;
+                overflow-x: clip;
+            }
+
+            .shop-header {
+                margin-bottom: 22px !important;
+            }
+
+            .shop-header h1 {
+                font-size: clamp(1.65rem, 6vw, 2.1rem);
+                margin-bottom: 12px;
+            }
+
+            .shop-header p {
+                font-size: 0.95rem !important;
+                margin-bottom: 0;
+            }
+
+            /* Stack filters above products instead of beside them */
+            .shop-layout {
+                display: flex !important;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 18px !important;
+                width: 100%;
+            }
+
+            .shop-filters {
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+                max-width: 100%;
+                gap: 12px;
+                padding: 0;
+                margin: 0;
+            }
+
+            .shop-filters .filter-section {
+                width: 100%;
+                min-width: 0;
+                margin-bottom: 0 !important;
+                padding: 12px;
+                border: 1px solid var(--color-border, rgba(148, 163, 184, 0.18));
+                border-radius: 12px;
+                background: var(--color-bg-secondary, rgba(30, 41, 59, 0.45));
+            }
+
+            .shop-filters .filter-section h3 {
+                font-size: 0.95rem !important;
+                margin: 0 0 10px !important;
+            }
+
+            /* Compact expandable category area */
+            .shop-mobile-category-toggle {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                min-height: 42px;
+                padding: 0;
+                border: 0;
+                background: transparent;
+                color: var(--color-text-primary, #f8fafc);
+                font: inherit;
+                font-weight: 600;
+                text-align: left;
+                cursor: pointer;
+            }
+
+            .shop-mobile-category-toggle .toggle-arrow {
+                flex: 0 0 auto;
+                transition: transform 180ms ease;
+            }
+
+            .shop-mobile-category-toggle[aria-expanded="true"] .toggle-arrow {
+                transform: rotate(180deg);
+            }
+
+            #categoryFilters {
+                display: none;
+                padding-top: 12px;
+                border-top: 1px solid var(--color-border, rgba(148, 163, 184, 0.18));
+            }
+
+            #categoryFilters.is-expanded {
+                display: block;
+            }
+
+            #categoryFilters label {
+                display: flex !important;
+                align-items: center;
+                gap: 10px !important;
+                width: 100%;
+                margin: 0 0 10px !important;
+                padding: 5px 0;
+                font-size: 0.9rem;
+            }
+
+            #categoryFilters label:last-child {
+                margin-bottom: 0 !important;
+            }
+
+            #categoryFilters input[type="radio"] {
+                width: 18px;
+                height: 18px;
+                margin: 0;
+            }
+
+            /* Sort filter remains visible and full width */
+            .shop-filters .filter-section.sort-filter-section {
+                padding: 12px;
+            }
+
+            .shop-filters .filter-section.sort-filter-section h3 {
+                margin-bottom: 8px !important;
+            }
+
+            #sortSelect {
+                min-height: 42px;
+                padding: 8px 10px;
+                font-size: 0.95rem;
+            }
+
+            /* Product count above the cards */
+            .shop-main {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+            }
+
+            .shop-controls {
+                margin-bottom: 12px !important;
+            }
+
+            #productCount {
+                font-size: 0.85rem;
+                line-height: 1.4;
+            }
+
+            /* Two compact columns on mobile */
+            #shopProductsGrid {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 12px 10px !important;
+                width: 100%;
+                min-width: 0;
+                align-items: stretch;
+            }
+
+            #shopProductsGrid > * {
+                min-width: 0 !important;
+                max-width: 100% !important;
+            }
+
+            #shopProductsGrid .product-card {
+                width: 100%;
+                min-width: 0;
+                max-width: 100%;
+                margin: 0;
+                overflow: hidden;
+                border-radius: 12px;
+            }
+
+            #shopProductsGrid .product-image-container {
+                width: 100%;
+                aspect-ratio: 1 / 1;
+                height: auto;
+                padding-top: 0 !important;
+            }
+
+            #shopProductsGrid .product-image-container img {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            }
+
+            #shopProductsGrid .product-content {
+                min-width: 0;
+                padding: 9px;
+            }
+
+            #shopProductsGrid .product-category {
+                font-size: 0.68rem;
+                line-height: 1.35;
+                margin-bottom: 4px;
+                overflow-wrap: anywhere;
+            }
+
+            #shopProductsGrid .product-title {
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+                overflow: hidden;
+                min-width: 0;
+                font-size: 0.82rem;
+                line-height: 1.4;
+                min-height: 2.3em;
+                margin-bottom: 6px;
+                overflow-wrap: anywhere;
+                word-break: normal;
+            }
+
+            #shopProductsGrid .product-rating {
+                gap: 3px;
+                flex-wrap: wrap;
+                font-size: 0.72rem;
+                margin-bottom: 5px;
+            }
+
+            #shopProductsGrid .product-price,
+            #shopProductsGrid .product-pricing {
+                min-width: 0;
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+
+            #shopProductsGrid .product-price-current {
+                font-size: 1rem;
+                line-height: 1.3;
+                overflow-wrap: anywhere;
+            }
+
+            #shopProductsGrid .product-price-original {
+                font-size: 0.72rem;
+                overflow-wrap: anywhere;
+            }
+
+            #shopProductsGrid .product-discount {
+                font-size: 0.68rem;
+            }
+
+            #shopProductsGrid .product-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                min-width: 0;
+                margin-top: 8px;
+            }
+
+            #shopProductsGrid .product-actions .btn,
+            #shopProductsGrid .product-actions button,
+            #shopProductsGrid .product-actions a {
+                min-width: 0;
+                max-width: 100%;
+                min-height: 36px;
+                padding: 7px 8px;
+                font-size: 0.75rem;
+                line-height: 1.25;
+                overflow-wrap: anywhere;
+            }
+
+            #shopProductsGrid .product-badge {
+                max-width: calc(100% - 12px);
+                padding: 4px 6px;
+                font-size: 0.62rem;
+                line-height: 1.2;
+                overflow-wrap: anywhere;
+            }
+
+            #shopProductsGrid .product-favorite {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+                min-height: 36px;
+            }
+
+            /* Long product names and prices cannot widen the page */
+            #shopProductsGrid .product-card *,
+            #shopProductsGrid .product-card *::before,
+            #shopProductsGrid .product-card *::after {
+                max-width: 100%;
+            }
+
+            /* Keep loading messages centered across the grid */
+            #shopProductsGrid > .products-loading,
+            #shopProductsGrid > .loading-state,
+            #shopProductsGrid > .error-state,
+            #shopProductsGrid > .empty-state {
+                grid-column: 1 / -1;
+            }
+        }
+
+        /* Extra-small phones */
+        @media (max-width: 360px) {
+            main.container {
+                padding-left: 9px !important;
+                padding-right: 9px !important;
+            }
+
+            #shopProductsGrid {
+                gap: 10px 8px !important;
+            }
+
+            #shopProductsGrid .product-content {
+                padding: 7px;
+            }
+
+            #shopProductsGrid .product-title {
+                font-size: 0.78rem;
+            }
+
+            #shopProductsGrid .product-price-current {
+                font-size: 0.92rem;
+            }
+        }
+
+        /* Desktop layout remains a sidebar + products grid */
+        @media (min-width: 768px) {
+            .shop-layout {
+                grid-template-columns: 250px minmax(0, 1fr);
+            }
+
+            .shop-mobile-category-toggle {
+                display: none !important;
+            }
+
+            #categoryFilters {
+                display: block !important;
+            }
+
+            #shopProductsGrid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (min-width: 1024px) {
+            #shopProductsGrid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .shop-mobile-category-toggle .toggle-arrow {
+                transition: none;
+            }
+        }
+    </style>
 </head>
 <body>
-    
+
     <nav class="nav" id="mainNav" role="navigation" aria-label="Main navigation">
         <div class="nav-container">
             <div class="nav-brand">
@@ -26,7 +487,7 @@
                     THE GADGET HUB STORE
                 </a>
             </div>
-            
+
             <ul class="nav-links" id="navLinks">
                 <li><a href="../index.html" class="nav-link">Home</a></li>
                 <li><a href="shop.html" class="nav-link active" aria-current="page">Shop</a></li>
@@ -34,7 +495,7 @@
                 <li><a href="trending.html" class="nav-link">Trending</a></li>
                 <li><a href="deals.html" class="nav-link">Deals</a></li>
             </ul>
-            
+
             <div class="nav-actions">
                 <div class="currency-selector" id="currencySelector">
                     <button class="currency-btn" id="currencyBtn" aria-label="Select currency" aria-haspopup="true" aria-expanded="false">
@@ -47,28 +508,28 @@
                     </button>
                     <div class="currency-dropdown" id="currencyDropdown" role="menu" aria-label="Currency selection"></div>
                 </div>
-                
+
                 <button class="nav-icon-btn" id="searchBtn" aria-label="Search products">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"/>
                         <path d="m21 21-4.35-4.35"/>
                     </svg>
                 </button>
-                
+
                 <a href="favorites.html" class="nav-icon-btn" aria-label="View favorites">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                     </svg>
                     <span class="favorites-badge" id="favoritesBadge" aria-live="polite">0</span>
                 </a>
-                
+
                 <a href="account.html" class="nav-icon-btn" aria-label="Account">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                         <circle cx="12" cy="7" r="4"/>
                     </svg>
                 </a>
-                
+
                 <button class="nav-icon-btn theme-toggle" id="themeToggle" aria-label="Toggle theme">
                     <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <circle cx="12" cy="12" r="5"/>
@@ -85,7 +546,7 @@
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                     </svg>
                 </button>
-                
+
                 <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle mobile menu" aria-expanded="false" aria-controls="mobileMenu">
                     <span class="hamburger"></span>
                     <span class="hamburger"></span>
@@ -93,7 +554,7 @@
                 </button>
             </div>
         </div>
-        
+
         <div class="mobile-menu" id="mobileMenu">
             <div class="mobile-menu-content">
                 <ul class="mobile-nav-links">
@@ -106,7 +567,7 @@
             </div>
         </div>
     </nav>
-    
+
     <div class="search-modal" id="searchModal" role="dialog" aria-modal="true" aria-labelledby="searchModalTitle">
         <div class="search-modal-content">
             <div class="search-modal-header">
@@ -128,21 +589,35 @@
             <div class="search-results" id="searchResults" aria-live="polite"></div>
         </div>
     </div>
-    
-    <main class="container" style="padding-top: var(--spacing-2xl); padding-bottom: var(--spacing-3xl);">
+
+    <main class="container shop-page-container" style="padding-top: var(--spacing-2xl); padding-bottom: var(--spacing-3xl);">
         <div class="shop-header" style="margin-bottom: var(--spacing-2xl);">
             <h1>Shop All Products</h1>
             <p style="color: var(--color-text-tertiary); font-size: 1.125rem;">Browse our complete collection of innovative gadgets and tech accessories</p>
         </div>
-        
-        <div class="shop-layout" style="display: grid; grid-template-columns: 250px 1fr; gap: var(--spacing-2xl);">
+
+        <div class="shop-layout">
             <aside class="shop-filters" id="shopFilters">
-                <div class="filter-section" style="margin-bottom: var(--spacing-xl);">
-                    <h3 style="font-size: 1rem; margin-bottom: var(--spacing-md);">Categories</h3>
+
+                <div class="filter-section category-filter-section">
+                    <button
+                        type="button"
+                        class="shop-mobile-category-toggle"
+                        id="categoryToggle"
+                        aria-expanded="false"
+                        aria-controls="categoryFilters">
+                        <span>Categories</span>
+                        <svg class="toggle-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="m6 9 6 6 6-6"/>
+                        </svg>
+                    </button>
+
+                    <h3 class="desktop-category-heading" style="font-size: 1rem; margin-bottom: var(--spacing-md);">Categories</h3>
+
                     <div id="categoryFilters"></div>
                 </div>
-                
-                <div class="filter-section" style="margin-bottom: var(--spacing-xl);">
+
+                <div class="filter-section sort-filter-section">
                     <h3 style="font-size: 1rem; margin-bottom: var(--spacing-md);">Sort By</h3>
                     <select id="sortSelect" class="form-input" style="width: 100%;">
                         <option value="featured">Featured</option>
@@ -154,13 +629,13 @@
                     </select>
                 </div>
             </aside>
-            
+
             <div class="shop-main">
                 <div class="shop-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
-                    <div id="productCount" style="color: var(--color-text-tertiary);"></div>
+                    <div id="productCount" style="color: var(--color-text-tertiary);" aria-live="polite"></div>
                 </div>
-                
-                <div class="products-grid" id="shopProductsGrid">
+
+                <div class="products-grid" id="shopProductsGrid" aria-live="polite">
                     <div class="products-loading">
                         <div class="spinner"></div>
                         <p>Loading products...</p>
@@ -169,7 +644,7 @@
             </div>
         </div>
     </main>
-    
+
     <footer class="footer" id="footer">
         <div class="container">
             <div class="footer-content">
@@ -178,7 +653,7 @@
                     <p class="footer-description">Discover trending gadgets and innovative tech products from around the world.</p>
                     <div class="footer-social" id="footerSocial"></div>
                 </div>
-                
+
                 <div class="footer-section">
                     <h4 class="footer-heading">Explore</h4>
                     <ul class="footer-links">
@@ -189,7 +664,7 @@
                         <li><a href="categories.html">Categories</a></li>
                     </ul>
                 </div>
-                
+
                 <div class="footer-section">
                     <h4 class="footer-heading">Customer</h4>
                     <ul class="footer-links">
@@ -197,7 +672,7 @@
                         <li><a href="favorites.html">Favorites</a></li>
                     </ul>
                 </div>
-                
+
                 <div class="footer-section">
                     <h4 class="footer-heading">Follow</h4>
                     <ul class="footer-links" id="footerFollowLinks">
@@ -208,38 +683,39 @@
                     </ul>
                 </div>
             </div>
-            
+
             <div class="footer-bottom">
                 <p class="footer-copyright">&copy; 2026 The Gadget Hub Store. All rights reserved.</p>
                 <p class="footer-affiliate-disclosure">As an affiliate partner, we may earn from qualifying purchases through our links.</p>
             </div>
         </div>
     </footer>
-    
+
     <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
-    
+
     <script type="module" src="../js/firebase.js"></script>
     <script type="module" src="../js/ui.js"></script>
     <script type="module" src="../js/app.js"></script>
     <script type="module" src="../js/products.js"></script>
     <script type="module" src="../js/categories.js"></script>
     <script type="module" src="../js/search.js"></script>
-    
+
     <script type="module">
         import { loadProducts, renderProductsGrid } from '../js/products.js';
         import { loadCategories } from '../js/categories.js';
-        import { showLoading, showError, showEmptyState } from '../js/ui.js';
-        
+        import { showError } from '../js/ui.js';
+
         let allProducts = [];
         let filteredProducts = [];
         let selectedCategory = null;
-        
+
         async function initializeShop() {
             try {
                 allProducts = await loadProducts();
                 filteredProducts = [...allProducts];
-                
+
                 await loadCategoryFilters();
+                setupCategoryToggle();
                 renderProducts();
                 updateProductCount();
                 setupEventListeners();
@@ -248,21 +724,21 @@
                 showError('shopProductsGrid', 'Failed to load products');
             }
         }
-        
+
         async function loadCategoryFilters() {
             const container = document.getElementById('categoryFilters');
             if (!container) return;
-            
+
             try {
                 const categories = await loadCategories();
-                
+
                 container.innerHTML = `
-                    <label style="display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); cursor: pointer;">
+                    <label style="display:flex; align-items:center; gap:var(--spacing-sm); margin-bottom:var(--spacing-sm); cursor:pointer;">
                         <input type="radio" name="category" value="all" checked>
                         <span>All Categories</span>
                     </label>
                     ${categories.map(cat => `
-                        <label style="display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); cursor: pointer;">
+                        <label style="display:flex; align-items:center; gap:var(--spacing-sm); margin-bottom:var(--spacing-sm); cursor:pointer;">
                             <input type="radio" name="category" value="${cat.id}">
                             <span>${cat.name}</span>
                         </label>
@@ -272,79 +748,147 @@
                 console.error('Error loading category filters:', error);
             }
         }
-        
+
+        function setupCategoryToggle() {
+            const toggle = document.getElementById('categoryToggle');
+            const filters = document.getElementById('categoryFilters');
+            const desktopHeading = document.querySelector('.desktop-category-heading');
+
+            if (!toggle || !filters) return;
+
+            function updateForViewport() {
+                const isMobile = window.matchMedia('(max-width: 767px)').matches;
+
+                if (isMobile) {
+                    toggle.style.display = 'flex';
+                    if (desktopHeading) desktopHeading.style.display = 'none';
+
+                    filters.classList.remove('is-expanded');
+                    toggle.setAttribute('aria-expanded', 'false');
+                } else {
+                    toggle.style.display = 'none';
+                    if (desktopHeading) desktopHeading.style.display = '';
+
+                    filters.classList.add('is-expanded');
+                    toggle.setAttribute('aria-expanded', 'true');
+                }
+            }
+
+            toggle.addEventListener('click', () => {
+                const expanded = toggle.getAttribute('aria-expanded') === 'true';
+                toggle.setAttribute('aria-expanded', String(!expanded));
+                filters.classList.toggle('is-expanded', !expanded);
+            });
+
+            updateForViewport();
+
+            window.addEventListener('resize', updateForViewport, { passive: true });
+        }
+
         function setupEventListeners() {
             const categoryInputs = document.querySelectorAll('input[name="category"]');
+
             categoryInputs.forEach(input => {
                 input.addEventListener('change', handleCategoryFilter);
             });
-            
+
             const sortSelect = document.getElementById('sortSelect');
+
             if (sortSelect) {
                 sortSelect.addEventListener('change', handleSort);
             }
         }
-        
-        function handleCategoryFilter(e) {
-            selectedCategory = e.target.value === 'all' ? null : e.target.value;
+
+        function handleCategoryFilter(event) {
+            selectedCategory = event.target.value === 'all'
+                ? null
+                : event.target.value;
+
             applyFilters();
         }
-        
+
         function applyFilters() {
             if (selectedCategory) {
-                filteredProducts = allProducts.filter(p => p.categoryId === selectedCategory);
+                filteredProducts = allProducts.filter(
+                    product => product.categoryId === selectedCategory
+                );
             } else {
                 filteredProducts = [...allProducts];
             }
-            
+
             const sortSelect = document.getElementById('sortSelect');
+
             if (sortSelect) {
                 sortProducts(sortSelect.value);
             }
-            
+
             renderProducts();
             updateProductCount();
         }
-        
-        function handleSort(e) {
-            sortProducts(e.target.value);
+
+        function handleSort(event) {
+            sortProducts(event.target.value);
             renderProducts();
+            updateProductCount();
         }
-        
+
         function sortProducts(sortBy) {
-            switch(sortBy) {
+            switch (sortBy) {
                 case 'featured':
-                    filteredProducts.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+                    filteredProducts.sort(
+                        (a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0)
+                    );
                     break;
+
                 case 'newest':
-                    filteredProducts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                    filteredProducts.sort(
+                        (a, b) =>
+                            (b.createdAt?.toMillis?.() || 0) -
+                            (a.createdAt?.toMillis?.() || 0)
+                    );
                     break;
+
                 case 'price-low':
-                    filteredProducts.sort((a, b) => (a.basePrice || 0) - (b.basePrice || 0));
+                    filteredProducts.sort(
+                        (a, b) => (a.basePrice || 0) - (b.basePrice || 0)
+                    );
                     break;
+
                 case 'price-high':
-                    filteredProducts.sort((a, b) => (b.basePrice || 0) - (a.basePrice || 0));
+                    filteredProducts.sort(
+                        (a, b) => (b.basePrice || 0) - (a.basePrice || 0)
+                    );
                     break;
+
                 case 'rating':
-                    filteredProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+                    filteredProducts.sort(
+                        (a, b) => (b.rating || 0) - (a.rating || 0)
+                    );
                     break;
+
                 case 'discount':
-                    filteredProducts.sort((a, b) => (b.discount || 0) - (a.discount || 0));
+                    filteredProducts.sort(
+                        (a, b) => (b.discount || 0) - (a.discount || 0)
+                    );
                     break;
             }
         }
-        
+
         function renderProducts() {
             renderProductsGrid(filteredProducts, 'shopProductsGrid');
         }
-        
+
         function updateProductCount() {
-            const countEl = document.getElementById('productCount');
-            if (countEl) {
-                countEl.textContent = `Showing ${filteredProducts.length} ${filteredProducts.length === 1 ? 'product' : 'products'}`;
+            const countElement = document.getElementById('productCount');
+
+            if (countElement) {
+                countElement.textContent =
+                    `Showing ${filteredProducts.length} ${
+                        filteredProducts.length === 1 ? 'product' : 'products'
+                    }`;
             }
         }
-        
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initializeShop);
         } else {
