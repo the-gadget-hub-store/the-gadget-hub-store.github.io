@@ -2,13 +2,13 @@
 /* ================================
    THE GADGET HUB STORE
    Animations & Micro-interactions
+   Premium Shimmer & Skeleton Edition
    ================================ */
 
 /* ================================
    KEYFRAME ANIMATIONS
    ================================ */
 
-/* Fade In Up - Hero & Section Reveals */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -20,7 +20,6 @@
   }
 }
 
-/* Fade In Down - Dropdown Menus */
 @keyframes fadeInDown {
   from {
     opacity: 0;
@@ -32,7 +31,6 @@
   }
 }
 
-/* Slide In Down - Mobile Menu */
 @keyframes slideInDown {
   from {
     opacity: 0;
@@ -44,7 +42,6 @@
   }
 }
 
-/* Fade In - General Content */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -54,7 +51,6 @@
   }
 }
 
-/* Scale In - Modals & Overlays */
 @keyframes scaleIn {
   from {
     opacity: 0;
@@ -66,7 +62,6 @@
   }
 }
 
-/* Slide In Right - Toasts & Notifications */
 @keyframes slideInRight {
   from {
     opacity: 0;
@@ -78,7 +73,6 @@
   }
 }
 
-/* Slide In Left - Side Panels */
 @keyframes slideInLeft {
   from {
     opacity: 0;
@@ -90,7 +84,6 @@
   }
 }
 
-/* Slide In Up - Mobile Menus & Bottom Sheets */
 @keyframes slideInUp {
   from {
     opacity: 0;
@@ -102,7 +95,6 @@
   }
 }
 
-/* Pulse - Loading & Attention */
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -112,7 +104,6 @@
   }
 }
 
-/* Spin - Loading Spinners */
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -122,7 +113,6 @@
   }
 }
 
-/* Bounce - Success Indicators */
 @keyframes bounce {
   0%, 100% {
     transform: translateY(0);
@@ -132,7 +122,6 @@
   }
 }
 
-/* Shake - Error Feedback */
 @keyframes shake {
   0%, 100% {
     transform: translateX(0);
@@ -145,7 +134,6 @@
   }
 }
 
-/* Glow - Featured Elements */
 @keyframes glow {
   0%, 100% {
     box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
@@ -155,17 +143,40 @@
   }
 }
 
-/* Shimmer - Loading Skeletons */
+/* ================================
+   PREMIUM SHIMMER ANIMATIONS
+   ================================ */
+
+/* Standard skeleton shimmer */
 @keyframes shimmer {
   0% {
-    background-position: -1000px 0;
+    background-position: 200% 0;
   }
   100% {
-    background-position: 1000px 0;
+    background-position: -200% 0;
   }
 }
 
-/* Float - Hero Background */
+/* Wide, soft light sweep for product cards */
+@keyframes productSkeletonShimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+/* Subtle skeleton breathing */
+@keyframes skeletonPulse {
+  0%, 100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @keyframes float {
   0%, 100% {
     transform: translate(-50%, -50%) translateY(0);
@@ -175,7 +186,6 @@
   }
 }
 
-/* Rotate 3D - Interactive Cards */
 @keyframes rotate3d {
   0% {
     transform: rotateY(0deg);
@@ -185,7 +195,6 @@
   }
 }
 
-/* Progress Indeterminate */
 @keyframes progressIndeterminate {
   0% {
     left: -30%;
@@ -199,7 +208,6 @@
    UTILITY ANIMATION CLASSES
    ================================ */
 
-/* Fade Animations */
 .fade-in {
   animation: fadeIn 0.6s ease forwards;
 }
@@ -213,12 +221,10 @@
   animation: fadeInDown 0.5s ease forwards;
 }
 
-/* Scale Animations */
 .scale-in {
   animation: scaleIn 0.4s ease forwards;
 }
 
-/* Slide Animations */
 .slide-in-right {
   animation: slideInRight 0.4s ease forwards;
 }
@@ -231,7 +237,6 @@
   animation: slideInUp 0.5s ease forwards;
 }
 
-/* Loading Animations */
 .pulse {
   animation: pulse 2s ease-in-out infinite;
 }
@@ -240,7 +245,6 @@
   animation: spin 1s linear infinite;
 }
 
-/* Feedback Animations */
 .bounce {
   animation: bounce 0.6s ease;
 }
@@ -249,7 +253,6 @@
   animation: shake 0.5s ease;
 }
 
-/* Special Effects */
 .glow {
   animation: glow 2s ease-in-out infinite;
 }
@@ -271,7 +274,6 @@
   transform: translateY(0);
 }
 
-/* Staggered reveal for grid items */
 .reveal-stagger {
   opacity: 0;
   transform: translateY(30px);
@@ -285,7 +287,6 @@
   transform: translateY(0);
 }
 
-/* Apply stagger delay via JavaScript or nth-child */
 .reveal-stagger:nth-child(1) { transition-delay: 0s; }
 .reveal-stagger:nth-child(2) { transition-delay: 0.1s; }
 .reveal-stagger:nth-child(3) { transition-delay: 0.2s; }
@@ -297,7 +298,6 @@
 .reveal-stagger:nth-child(9) { transition-delay: 0.8s; }
 .reveal-stagger:nth-child(10) { transition-delay: 0.9s; }
 
-/* Reveal from left */
 .reveal-left {
   opacity: 0;
   transform: translateX(-40px);
@@ -311,7 +311,6 @@
   transform: translateX(0);
 }
 
-/* Reveal from right */
 .reveal-right {
   opacity: 0;
   transform: translateX(40px);
@@ -325,7 +324,6 @@
   transform: translateX(0);
 }
 
-/* Reveal with scale */
 .reveal-scale {
   opacity: 0;
   transform: scale(0.97);
@@ -343,23 +341,22 @@
    3D CARD HOVER EFFECTS
    ================================ */
 
-/* Enable 3D transforms on containers */
 .card-3d-container {
   perspective: 1000px;
   transform-style: preserve-3d;
 }
 
-/* Product Card 3D Tilt */
 .product-card {
   transform-style: preserve-3d;
-  transition: transform 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .product-card .product-image {
   transition: transform 0.4s ease;
 }
 
-/* Category Card 3D Lift */
 .category-card {
   transform-style: preserve-3d;
   transition: transform 0.3s ease;
@@ -369,7 +366,6 @@
   transition: transform 0.35s ease;
 }
 
-/* Feature Card Depth */
 .feature-card {
   transform-style: preserve-3d;
   transition: transform 0.3s ease;
@@ -379,15 +375,13 @@
   transition: transform 0.35s ease;
 }
 
-/* Hover-only effects on devices that support hover */
 @media (hover: hover) and (pointer: fine) {
-
   .product-card:hover {
-    transform: translateY(-6px) rotateX(1deg) rotateY(1deg);
+    transform: translateY(-4px);
   }
 
   .product-card:hover .product-image {
-    transform: scale(1.06);
+    transform: scale(1.045);
   }
 
   .category-card:hover {
@@ -421,7 +415,6 @@
     color 0.2s ease;
 }
 
-/* Button ripple effect */
 .btn::before {
   content: '';
   position: absolute;
@@ -443,7 +436,6 @@
   height: 250px;
 }
 
-/* Button hover lift */
 @media (hover: hover) and (pointer: fine) {
   .btn:hover {
     transform: translateY(-2px);
@@ -454,7 +446,6 @@
   transform: translateY(0) scale(0.99);
 }
 
-/* Button loading state */
 .btn.loading {
   pointer-events: none;
   opacity: 0.7;
@@ -472,7 +463,6 @@
    INPUT & FORM ANIMATIONS
    ================================ */
 
-/* Input focus animation */
 .search-input,
 .newsletter-input,
 input[type="text"],
@@ -494,7 +484,6 @@ textarea:focus {
   transform: none;
 }
 
-/* Label float animation */
 .form-group {
   position: relative;
 }
@@ -526,7 +515,6 @@ textarea:focus {
    NAVIGATION ANIMATIONS
    ================================ */
 
-/* Navigation scroll behavior */
 .nav {
   transition:
     box-shadow 0.3s ease,
@@ -537,7 +525,6 @@ textarea:focus {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* Navigation link underline animation */
 .nav-link {
   position: relative;
 }
@@ -564,7 +551,6 @@ textarea:focus {
   width: 80%;
 }
 
-/* Mobile menu slide animation */
 .mobile-menu {
   transition:
     opacity 0.25s ease,
@@ -580,7 +566,6 @@ textarea:focus {
    DROPDOWN & MODAL ANIMATIONS
    ================================ */
 
-/* Currency dropdown */
 .currency-dropdown {
   transition:
     opacity 0.2s ease,
@@ -592,7 +577,6 @@ textarea:focus {
   animation: fadeInDown 0.2s ease both;
 }
 
-/* Search modal */
 .search-modal {
   transition:
     opacity 0.25s ease,
@@ -615,7 +599,6 @@ textarea:focus {
    IMAGE ANIMATIONS
    ================================ */
 
-/* Image lazy load fade-in */
 img[data-src] {
   opacity: 0;
   transition: opacity 0.35s ease;
@@ -625,7 +608,6 @@ img.loaded {
   opacity: 1;
 }
 
-/* Image zoom on hover */
 .product-image-container,
 .category-image-container {
   overflow: hidden;
@@ -636,66 +618,217 @@ img.loaded {
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Use one image zoom rule to prevent conflicting transforms */
 @media (hover: hover) and (pointer: fine) {
   .product-card:hover .product-image,
   .category-card:hover .category-image {
-    transform: scale(1.06);
+    transform: scale(1.045);
   }
 }
 
 /* ================================
-   SKELETON LOADING ANIMATIONS
+   PRODUCT CARD SKELETON SHIMMER
    ================================ */
 
+/*
+  Supported skeleton elements:
+  .skeleton
+  .skeleton-card
+  .skeleton-image
+  .skeleton-text
+  .skeleton-title
+  .skeleton-price
+  .skeleton-button
+
+  Add these classes to temporary loading markup.
+*/
+
 .skeleton {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   background: linear-gradient(
-    90deg,
-    var(--color-bg-secondary) 0%,
-    var(--color-bg-tertiary) 50%,
-    var(--color-bg-secondary) 100%
+    100deg,
+    var(--skeleton-base, #e9e9e9) 25%,
+    var(--skeleton-highlight, #f7f7f7) 45%,
+    var(--skeleton-base, #e9e9e9) 65%
   );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-  border-radius: var(--radius-md);
+  background-size: 250% 100%;
+  animation: shimmer 1.5s linear infinite;
+  border-radius: var(--radius-md, 8px);
+}
+
+/* Light theme defaults */
+:root {
+  --skeleton-base: #e9e9e9;
+  --skeleton-highlight: #f8f8f8;
+}
+
+/* Dark theme support */
+[data-theme="dark"] {
+  --skeleton-base: #263244;
+  --skeleton-highlight: #3a485d;
+}
+
+.dark-theme {
+  --skeleton-base: #263244;
+  --skeleton-highlight: #3a485d;
+}
+
+/* Optional full product-card loading placeholder */
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-bg-secondary, #fff);
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+}
+
+.skeleton-card .skeleton-image {
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+}
+
+.skeleton-card-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
 }
 
 .skeleton-text {
-  height: 16px;
-  margin-bottom: 8px;
+  display: block;
+  width: 100%;
+  height: 12px;
+  margin: 0;
 }
 
 .skeleton-title {
-  height: 24px;
-  width: 60%;
-  margin-bottom: 12px;
+  display: block;
+  width: 85%;
+  height: 16px;
+  margin: 2px 0 4px;
 }
 
-.skeleton-image {
+.skeleton-category {
+  display: block;
+  width: 42%;
+  height: 10px;
+}
+
+.skeleton-rating {
+  display: block;
+  width: 55%;
+  height: 12px;
+}
+
+.skeleton-price {
+  display: block;
+  width: 62%;
+  height: 22px;
+  margin-top: 2px;
+}
+
+.skeleton-button {
+  display: block;
   width: 100%;
-  padding-top: 100%;
-  position: relative;
+  height: 36px;
+  margin-top: auto;
+  border-radius: var(--radius-md, 8px);
 }
 
 .skeleton-circle {
   border-radius: 50%;
 }
 
+.skeleton-image {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--skeleton-base, #e9e9e9);
+  background-image: linear-gradient(
+    100deg,
+    var(--skeleton-base, #e9e9e9) 25%,
+    var(--skeleton-highlight, #f8f8f8) 45%,
+    var(--skeleton-base, #e9e9e9) 65%
+  );
+  background-size: 250% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+.skeleton-image::after {
+  content: none;
+}
+
+/* Shimmer can also be applied to individual elements */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 80%
+  );
+  transform: translateX(-120%);
+  animation: productSkeletonShimmer 1.6s ease-in-out infinite;
+}
+
+[data-theme="dark"] .skeleton-shimmer::after,
+.dark-theme .skeleton-shimmer::after {
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 80%
+  );
+}
+
+/* Product loading grid */
+.products-grid.is-loading {
+  align-items: stretch;
+}
+
+.products-grid.is-loading > .skeleton-card {
+  pointer-events: none;
+}
+
+/* Hide shimmer if the product has loaded */
+.skeleton-card.is-loaded,
+.skeleton.is-loaded {
+  animation: none;
+}
+
 /* ================================
    BADGE & NOTIFICATION ANIMATIONS
    ================================ */
 
-/* Badge pop-in */
 .product-badge {
   animation: scaleIn 0.3s ease both;
 }
 
-/* Favorites badge pulse */
+.product-sale-badge {
+  animation: scaleIn 0.3s ease both;
+}
+
 .favorites-badge {
   animation: pulse 2s ease-in-out infinite;
 }
 
-/* New item indicator */
 .new-indicator {
   animation: pulse 1.5s ease-in-out infinite;
 }
@@ -716,7 +849,6 @@ img.loaded {
    CART & FAVORITE ANIMATIONS
    ================================ */
 
-/* Add to favorites heart animation */
 .product-favorite {
   transition:
     transform 0.2s ease,
@@ -991,15 +1123,23 @@ img.loaded {
     transform: none;
   }
 
-  .hero-gradient {
-    animation: none;
-  }
-
+  .hero-gradient,
   .skeleton,
+  .skeleton-image,
+  .skeleton-shimmer::after,
   .favorites-badge,
   .new-indicator,
   .glow {
-    animation: none;
+    animation: none !important;
+  }
+
+  .skeleton,
+  .skeleton-image {
+    background-image: none;
+  }
+
+  .skeleton-card {
+    opacity: 1;
   }
 }
 
@@ -1007,8 +1147,6 @@ img.loaded {
    PERFORMANCE OPTIMIZATIONS
    ================================ */
 
-/* Avoid permanently reserving resources for transforms.
-   Animated elements use their own transitions and keyframes. */
 .product-card,
 .category-card,
 .feature-card,
